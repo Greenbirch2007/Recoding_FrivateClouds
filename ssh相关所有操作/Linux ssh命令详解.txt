@@ -1,0 +1,673 @@
+ SSH(远程连接工具)连接原理：ssh服务是一个守护进程(demon)，系统后台监听客户端的连接，ssh服务端的进程名为sshd,负责实时监听客户端的请求(IP 22端口)，包括公共秘钥等交换等信息。
+
+ssh服务端由2部分组成： openssh(提供ssh服务)    openssl(提供加密的程序)
+
+ssh的客户端可以用 XSHELL，Securecrt, Mobaxterm等工具进行连接
+
+SSH的工作机制 
+      服务器启动的时候自己产生一个密钥(768bit公钥)，本地的ssh客户端发送连接请求到ssh服务器，服务器检查连接点客户端发送的数据和IP地址，确认合法后发送密钥(768bits)给客户端，此时客户端将本地私钥(256bit)和服务器的公钥(768bit)结合成密钥对key(1024bit),发回给服务器端，建立连接通过key-pair数据传输。       
+
+SSH的加密技术
+加密技术：传输过程，数据加密。             
+1.SSH1没有对客户端的秘钥进行校验，很容易被植入恶意代码 
+2.SSH2增加了一个确认联机正确性的Diffe_Hellman机制，每次数据的传输，Server都会检查数据来源的正确性，避免黑客入侵。                    
+  SSH2支持RSA和DSA密钥    
+        DSA:digital signature Algorithm  数字签名
+        RSA:既可以数字签名又可以加密      
+
+SSH知识小结           
+   1.SSH是安全的加密协议，用于远程连接Linux服务器                
+   2.SSH的默认端口是22，安全协议版本是SSH2                
+   3.SSH服务器端主要包含2个服务功能SSH连接和SFTP服务器                
+   4.SSH客户端包含ssh连接命令和远程拷贝scp命令等 
+
+如何防止SSH登录入侵            
+    1.密钥登录,更改端口                
+    2.牤牛阵法                
+    3.监听本地内网IP(ListenAddress 192.168.25.*)
+
+SSH功能大全   
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+1.登录                   
+       ssh -p22 omd@192.168.25.137               
+   2.直接执行命令  -->最好全路径                   
+       ssh root@192.168.25.137 ls -ltr /backup/data                       
+           ==>ssh root@192.168.25.137 /bin/ls -ltr /backup/data               
+   3.查看已知主机                    
+        cat /root/.ssh/known_hosts
+   4.ssh远程执行sudo命令
+       ssh -t omd@192.168.25.137 sudo rsync hosts /etc/
+ 
+   5.scp               
+             1.功能   -->远程文件的安全(加密)拷贝                   
+                 scp -P22 -r -p /home/omd/h.txt omd@192.168.25.137:/home/omd/               
+             2.scp知识小结                   
+                 scp是加密远程拷贝，cp为本地拷贝                   
+                 可以推送过去，也可以拉过来                   
+                 每次都是全量拷贝(效率不高，适合第一次)，增量拷贝用rsync
+ 
+   6.ssh自带的sftp功能               
+             1.Window和Linux的传输工具                   
+                  wincp   filezip                   
+               sftp  -->基于ssh的安全加密传输                   
+               samba   
+             2.sftp客户端连接                   
+                sftp -oPort=22 root@192.168.25.137                   
+                put /etc/hosts /tmp                   
+                get /etc/hosts /home/omd   
+            3.sftp小结：                   
+                1.linux下使用命令： sftp -oPort=22 root@x.x.x.x                   
+                2.put加客户端本地路径上传                  
+                3.get下载服务器端内容到本地                   
+                4.远程连接默认连接用户的家目录
+ssh常见命令参数
+1
+2
+3
+4
+5
+6
+7
+usage: ssh [-1246AaCfgKkMNnqsTtVvXxYy] [-b bind_address] [-c cipher_spec]
+           [-D [bind_address:]port] [-e escape_char] [-F configfile]
+           [-i identity_file] [-L [bind_address:]port:host:hostport]
+           [-l login_name] [-m mac_spec] [-O ctl_cmd] [-o option] [-p port]
+           [-R [bind_address:]port:host:hostport] [-S ctl_path]
+           [-W host:port] [-w local_tun[:remote_tun]]
+           [user@]hostname [command]
+
+关于后台ssh服务的相关
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+# 查询openssl软件
+    rpm -qa openssh openssl
+# 查询sshd进程
+    ps -ef | grep ssh
+        --> /usr/sbin/sshd
+# 查看ssh端口
+    netstat -lntup | grep ssh  
+    ss | grep ssh                (效果同上，同下，好用)
+    netstat -a | grep ssh(记住这个)
+    netstat -lnt | grep 22    ==>  查看22端口有没有开/ssh服务有没有开启
+    技巧： netstat -lnt | grep ssh | wc -l -->只要大于2个就是ssh服务就是好的
+# 查看ssh的秘钥目录
+    ll /root/.ssh/known_hosts  # 当前用户家目录的.ssh目录下
+# ssh的配置文件
+    cat /etc/ssh/sshd_config   
+# ssh服务的关闭
+    service sshd stop
+# ssh服务的开启：
+    service sshd start
+# ssh服务的重启
+    service sshd reload    [停止进程后重启] ==> 推荐
+    service sshd restart   [干掉进程后重启] ==> 不推荐
+# ssh远程登录
+    ssh 192.168.1.100      # 默认利用当前宿主用户的用户名登录
+    ssh omd@192.168.1.100  # 利用远程机的用户登录
+    ssh omd@192.168.1.100  -o stricthostkeychecking=no # 首次登陆免输yes登录
+    ssh omd@192.168.1.100 "ls /home/omd"  # 当前服务器A远程登录服务器B后执行某个命令
+    ssh omd@192.168.1.100 -t "sh /home/omd/ftl.sh"  # 当前服务器A远程登录服务器B后执行某个脚本
+
+ssh免密设置
+1、进入用户的家目录
+
+1
+2
+[root@localhost ~]# cd /root/.ssh/             【root用户就在root目录下的.ssh目录】
+[root@localhost ~]# cd /home/omd/.ssh/   【普通用户就是在家目录下的.ssh目录】
+image
+
+2、根据DSA算法生成私钥和公钥【默认建立在当前用户的家目录】
+
+1
+2
+3
+[root@localhost .ssh]# ssh-keygen -t dsa     # 一路回车即可
+                id_dsa         -->私钥(钥匙) 
+                id_dsa.pub     -->公钥(锁)
+image
+
+3.拷贝公钥给目标服务器
+
+1
+2
+[root@localhost .ssh]# ssh-copy-id -i id_dsa.pub omd@192.168.25.110              【 使用ssh登录的默认端口22】
+[root@localhost .ssh]# ssh-copy-id -i id_dsa.pub –p 666 omd@192.168.25.120   【使用ssh登录设置的端口666】
+
+
+4. 查看目标服务器生成的文件
+
+1
+[omd@localhost .ssh]$ ll /home/omd/.ssh/authorized_keys
+image
+
+5. 免密码登录目标服务器
+
+1
+ssh omd@192.168.25.110
+6. 总结一下钥匙和锁的关系
+
+1
+2
+3
+4
+5
+6
+1.多个钥匙开一把锁
+      把id_dsa.pub 复制给各个服务器
+ 
+2.一个钥匙开duobasuo
+      把id_dsa 传给各个服务器
+      把id_dsa 传给自己  
+ssh排查问题
+1
+2
+3
+1.判断物理链路是否通  ping 192.168.25.130     线路 | 防火墙 | 是否同一个网的
+            ping   本身是icmp协议
+2.判断服务是否正常
+1
+telnet 192.168.25.130 22
+1
+3.Linux防火墙
+1
+service iptables status ==>  /etc/init.d/iptables status　　
+1
+4.打开ssh的调测进行观察
+1
+ssh -vvv omd@192.168.1.100
+SSH批量分发与管理方案小结
+
+1.利用root做ssh key验证
+
+优点：简单，易用
+    缺点：安全性能差，无法禁止root远程连接
+
+
+2.利用普通用户omd                -->推荐
+
+
+    思路：把要分发的文件拷贝到服务器用户的家目录，然后利用sudo提权拷贝分发的文件和对应目录
+    优点：安全
+    缺点：复杂，配置麻烦
+    1.sudo提权
+        echo 'omd     All=(All)      NOPASSWD:/usr/bin/rsync' >> /etc/sudoers 
+        visudo -c
+        grep omd /etc/sudoers
+    2.ssh分发到服务器的家目录
+        ssh -p22 -r /etc/hosts omd@192.168.25.137:~
+    3.ssh使用sudo复制到目标服务器的/etc
+        ssh -t omd@192.168.25.137 sudo rsync hosts /etc/
+
+3.拓展方案2，不用sudo，而是设置suid对固定命令提权
+
+ 优点：相当安全
+       缺点：复杂，安全性较差，任何人都可以处理带有suid权限的命令 
+       1.which rsync 
+       2.chmod 4755 /usr/bin/rsync       
+
+ssh章节小结             
+    1.ssh远程的加密连接协议，相关软件openssh,openssl                
+    2.默认端口22                
+    3.ssh版本协议                
+    4.服务器ssh连接，ftp连接，sshd守护进程，开机启动                
+    5.ssh客户端重要命令：ssh(用户登录&&远程命令),scp,sftp,                
+    6.安全验证方式：口令，密钥  学习原理                
+    7.ssh服务优化：改端口，改监听，no root,no empty,no DNS,
+    8.ssh密钥对，公钥在服务器端，私钥在客户端
+
+修改ssh服务的启动文件sshd的几个点
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+1-1修改 /etc/ssh/sshd_config<br>        GSSAPIAuthentication yes    解决一台服务器管理多个ssh服务
+    UseDNS no  加快响应速度因为在内网环境下
+    PermitRootLogin no  不运行root用户直接登录
+    Port 11544 更改访问端口号
+    ListenAddress  192.168.25.130  只监听内网的IP
+    Match User anoncvs     当前环境允许登录的用户
+    PermitRootLogin no      是否允许root用户登录，一般不允许开
+1-2重启服务
+    service sshd restart       写入命令进内存
+    service sshd reload(优先)  reload是一个平滑的访问，不影响用户使用
+1-3查看连接端口
+    netstat -an | grep EST
+SSH跳过HostKeyChecking，不用输入yes
+SSH跳过输入ssh跳过RSA key fingerprint输入yes/no
+
+在配置大量的节点之间需要ssh连通的时候，如果自动复制很多节点，都需要输入yes，两两节点之间都要互通一次，这样会造成很大的麻烦
+
+解决1；修改配置文件/etc/ssh/ssh_config
+
+1
+2
+找  到  # StrictHostKeyChecking ask  
+修改为：StrictHostKeyChecking no  
+解决2： 添加参数 –o  【o=option】
+
+1
+ssh root@192.168.25.133 -o "StrictHostKeyChecking no"
+
+
+1
+scp -o "StrictHostKeyChecking no" newfile.txt <a href="mailto:root@192.168.25.133:/root">root@192.168.25.133:/root</a>
+
+
+ssh带密码登录之sshpass的安装
+
+【下载地址】https://sourceforge.net/projects/sshpass/files/latest/download
+
+上传文件到服务器
+
+
+
+CentOS下安装：
+
+1
+2
+3
+4
+[root@localhost ~]# tar xf sshpass-1.06.tar.gz 
+[root@localhost ~]# cd sshpass-1.06
+[root@localhost sshpass-1.06]# ./configure 
+[root@localhost sshpass-1.06]# make && make install
+
+
+检查是否安装成功：
+
+1
+2
+[root@localhost sshpass-1.06]# which sshpass
+/usr/local/bin/sshpass
+
+
+远程登录主机：
+
+1
+sshpass -p FTL600@HH ssh omd@192.168.25.110 -o "StrictHostKeyChecking no"
+
+
+注意：如果是第一次登录，需要输入手动yes,此时sshpass并不会给提示，所以登录异常
+
+Ubuntu下安装方法一[推荐]：简单
+
+1
+omd@omd-virtual-machine:~/sshpass-1.06$ sudo apt install sshpass
+
+
+安装成功：
+
+1
+omd@omd-virtual-machine:~/sshpass-1.06$ which sshpass
+
+
+Ubuntu下安装方法二：
+
+1
+2
+3
+4
+5
+omd@omd-virtual-machine:~$ tar xf sshpass-1.06.tar.gz 
+omd@omd-virtual-machine:~$ cd sshpass-1.06/
+omd @omd-virtual-machine:~/sshpass-1.06$ ./configure 
+omd@omd-virtual-machine:~/sshpass-1.06$ sudo make && make install
+其同CentOS下安装
+ 
+
+附ssh的配置文件
+1
+/etc/ssh/sshd_config
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+[root@localhost .ssh]# cat /etc/ssh/sshd_config 
+#       $OpenBSD: sshd_config,v 1.80 2008/07/02 02:24:18 djm Exp $
+ 
+# This is the sshd server system-wide configuration file.  See
+# sshd_config(5) for more information.
+ 
+# This sshd was compiled with PATH=/usr/local/bin:/bin:/usr/bin
+ 
+# The strategy used for options in the default sshd_config shipped with
+# OpenSSH is to specify options with their default value where
+# possible, but leave them commented.  Uncommented options change a
+# default value.
+ 
+#Port 22
+#AddressFamily any
+#ListenAddress 0.0.0.0
+#ListenAddress ::
+ 
+# Disable legacy (protocol version 1) support in the server for new
+# installations. In future the default will change to require explicit
+# activation of protocol 1
+Protocol 2
+ 
+# HostKey for protocol version 1
+#HostKey /etc/ssh/ssh_host_key
+# HostKeys for protocol version 2
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_dsa_key
+ 
+# Lifetime and size of ephemeral version 1 server key
+#KeyRegenerationInterval 1h
+#ServerKeyBits 1024
+ 
+# Logging
+# obsoletes QuietMode and FascistLogging
+#SyslogFacility AUTH
+SyslogFacility AUTHPRIV
+#LogLevel INFO
+ 
+# Authentication:
+ 
+#LoginGraceTime 2m
+#PermitRootLogin yes
+#StrictModes yes
+#MaxAuthTries 6
+#MaxSessions 10
+ 
+#RSAAuthentication yes
+#PubkeyAuthentication yes
+#AuthorizedKeysFile     .ssh/authorized_keys
+#AuthorizedKeysCommand none
+#AuthorizedKeysCommandRunAs nobody
+ 
+# For this to work you will also need host keys in /etc/ssh/ssh_known_hosts
+#RhostsRSAAuthentication no
+# similar for protocol version 2
+#HostbasedAuthentication no
+# Change to yes if you don't trust ~/.ssh/known_hosts for
+# RhostsRSAAuthentication and HostbasedAuthentication
+#IgnoreUserKnownHosts no
+# Don't read the user's ~/.rhosts and ~/.shosts files
+#IgnoreRhosts yes
+ 
+# To disable tunneled clear text passwords, change to no here!
+#PasswordAuthentication yes
+#PermitEmptyPasswords no
+PasswordAuthentication yes
+ 
+# Change to no to disable s/key passwords
+#ChallengeResponseAuthentication yes
+ChallengeResponseAuthentication no
+ 
+# Kerberos options
+#KerberosAuthentication no
+#KerberosOrLocalPasswd yes
+#KerberosTicketCleanup yes
+#KerberosGetAFSToken no
+#KerberosUseKuserok yes
+ 
+# GSSAPI options
+#GSSAPIAuthentication no
+GSSAPIAuthentication yes
+#GSSAPICleanupCredentials yes
+GSSAPICleanupCredentials yes
+#GSSAPIStrictAcceptorCheck yes
+#GSSAPIKeyExchange no
+ 
+# Set this to 'yes' to enable PAM authentication, account processing, 
+# and session processing. If this is enabled, PAM authentication will 
+# be allowed through the ChallengeResponseAuthentication and
+# PasswordAuthentication.  Depending on your PAM configuration,
+# PAM authentication via ChallengeResponseAuthentication may bypass
+# the setting of "PermitRootLogin without-password".
+# If you just want the PAM account and session checks to run without
+# PAM authentication, then enable this but set PasswordAuthentication
+# and ChallengeResponseAuthentication to 'no'.
+#UsePAM no
+UsePAM yes
+ 
+# Accept locale-related environment variables
+AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+AcceptEnv LC_IDENTIFICATION LC_ALL LANGUAGE
+AcceptEnv XMODIFIERS
+ 
+#AllowAgentForwarding yes
+#AllowTcpForwarding yes
+#GatewayPorts no
+#X11Forwarding no
+X11Forwarding yes
+#X11DisplayOffset 10
+#X11UseLocalhost yes
+#PrintMotd yes
+#PrintLastLog yes
+#TCPKeepAlive yes
+#UseLogin no
+#UsePrivilegeSeparation yes
+#PermitUserEnvironment no
+#Compression delayed
+#ClientAliveInterval 0
+#ClientAliveCountMax 3
+#ShowPatchLevel no
+#UseDNS yes
+#PidFile /var/run/sshd.pid
+#MaxStartups 10
+#PermitTunnel no
+#ChrootDirectory none
+ 
+# no default banner path
+#Banner none
+ 
+# override default of no subsystems
+Subsystem       sftp    /usr/libexec/openssh/sftp-server
+ 
+# Example of overriding settings on a per-user basis
+#Match User anoncvs
+#       X11Forwarding no
+#       AllowTcpForwarding no
+#       ForceCommand cvs server
+作者：小a玖拾柒
+出处：http://www.cnblogs.com/ftl1012/
+-------------------------------------------
+
+个性签名: 所有的事情到最後都是好的，如果不好，那說明事情還沒有到最後～
+
+本文版权归作者【小a玖拾柒】和【博客园】共有，欢迎转载，但未经

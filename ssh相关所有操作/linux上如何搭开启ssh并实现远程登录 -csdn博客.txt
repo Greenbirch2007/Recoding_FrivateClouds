@@ -1,0 +1,27 @@
+linux上如何搭开启ssh并实现远程登录 -csdn博客
+
+安装ssh-server 
+sudo apt-get install openssh-server 
+linux缺省安装了openssh-client,所以在这里就不安装了，如果你的系统没有安装的话，再用sudo apt-get install openssh-client安装上即可。
+
+
+sudo /etc/init.d/ssh start 或者 service ssh start:启动ssh服务
+ps -e | grep sshd：查看服务状态，如果没运行则什么也不显示
+service ssh status:查看ssh服务状态
+service ssh stop :停止ssh服务
+3.查看ssh登录要用到的信息 
+ifconfig 
+查看IP地址：类似如下 
+ 
+有IPV4和IPV6的地址
+
+4.远程登录 
+ssh 用户名@ip地址 
+ssh [-l login_name] [-p port] hostname 
+之后输入密码即可远程登录 
+之后如果看到welcome就是登录成功了 
+--------------------- 
+作者：i-Curve 
+来源：CSDN 
+原文：https://blog.csdn.net/qq_38701476/article/details/81135428 
+版权声明：本文为博主原创文章，转载请附上博文链接！

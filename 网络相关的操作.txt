@@ -1,0 +1,15 @@
+
+
+ipconfig
+
+curl www.baidu.com
+
+ping www.baidu.com
+
+ip addr
+
+183.232.231.174
+
+如果修改ip?
+
+ip地址改了，网关怎么处理？
